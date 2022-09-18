@@ -141,6 +141,7 @@ namespace ExampleLibrary
         }
 
         [Example("LogarithmicAxis with AxisChanged event handler")]
+        [Obsolete("Use PlotController commands")]
         public static PlotModel AxisChangedEventHAndler()
         {
             var model = new PlotModel { Title = "AxisChanged event handler" };

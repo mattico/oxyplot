@@ -52,6 +52,7 @@ namespace ExampleLibrary
         }
 
         [Example("TrackerChangedEvent")]
+        [Obsolete("Use PlotController commands")]
         public static PlotModel TrackerChangedEvent()
         {
             var model = new PlotModel
