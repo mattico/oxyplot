@@ -79,7 +79,7 @@ namespace OxyPlot
                 this.YAxis.Pan(previousPosition, newPosition);
             }
 
-            var current = this.InverseTransform(newPosition.X, newPosition.Y);
+            var current = this.InverseTransform(newPosition);
 
             if (this.XAxis != null)
             {

@@ -49,7 +49,7 @@ namespace OxyPlot
                 return;
             }
 
-            var current = this.InverseTransform(e.Position.X, e.Position.Y);
+            var current = this.InverseTransform(e.Position);
 
             var scale = this.Step;
             if (this.FineControl)

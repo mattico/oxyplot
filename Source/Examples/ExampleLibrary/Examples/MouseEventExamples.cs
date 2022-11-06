@@ -19,7 +19,7 @@ namespace ExampleLibrary
     public class MouseEventExamples
     {
         [Example("PlotModel mouse events")]
-        public static PlotModel MouseEvents()
+        public static Example MouseEvents()
         {
             var model = new PlotModel { Title = "Mouse events", Subtitle = "Left click and drag" };
             var yaxis = new LinearAxis { Position = AxisPosition.Left, Minimum = -1, Maximum = 1 };
@@ -27,79 +27,96 @@ namespace ExampleLibrary
             model.Axes.Add(yaxis);
             model.Axes.Add(xaxis);
 
+            var controller = new PlotController();
+
+            controller.UnbindMouseDown(OxyMouseButton.Left);
+            controller.BindMouseDown(OxyMouseButton.Left, new DelegatePlotCommand<OxyMouseDownEventArgs>(
+                (v, c, a) => c.AddMouseManipulator(v, new DrawLineMouseManipulator(v), a)));
+
+            return new Example(model, controller);
+        }
+
+        public class DrawLineMouseManipulator : MouseManipulator
+        {
             LineSeries s1 = null;
 
-            // Subscribe to the mouse down event on the line series
-            model.MouseDown += (s, e) =>
+            public DrawLineMouseManipulator(IPlotView plotView) : base(plotView)
             {
-                // only handle the left mouse button (right button can still be used to pan)
-                if (e.ChangedButton == OxyMouseButton.Left)
-                {
-                    // Add a line series
-                    s1 = new LineSeries
-                    {
-                        Title = "LineSeries" + (model.Series.Count + 1),
-                        MarkerType = MarkerType.None,
-                        StrokeThickness = 2
-                    };
-                    s1.Points.Add(xaxis.InverseTransform(e.Position.X, e.Position.Y, yaxis));
-                    model.Series.Add(s1);
-                    model.InvalidatePlot(false);
-                    e.Handled = true;
-                }
-            };
+            }
 
-            model.MouseMove += (s, e) =>
+            public override void Started(OxyMouseEventArgs e)
             {
-                if (s1 != null)
+                base.Started(e);
+                
+                // Add a line series
+                this.s1 = new LineSeries
                 {
-                    s1.Points.Add(xaxis.InverseTransform(e.Position.X, e.Position.Y, yaxis));
-                    model.InvalidatePlot(false);
-                    e.Handled = true;
-                }
-            };
+                    Title = "LineSeries" + (this.PlotView.ActualModel.Series.Count + 1),
+                    MarkerType = MarkerType.None,
+                    StrokeThickness = 2
+                };
+                this.s1.Points.Add(this.InverseTransform(e.Position));
+                this.PlotView.ActualModel.Series.Add(this.s1);
+                this.PlotView.InvalidatePlot(false);
+                e.Handled = true;
+            }
 
-            model.MouseUp += (s, e) =>
+            public override void Delta(OxyMouseEventArgs e)
             {
-                if (s1 != null)
-                {
-                    s1 = null;
-                    e.Handled = true;
-                }
-            };
-            return model;
+                this.s1.Points.Add(this.InverseTransform(e.Position));
+                this.PlotView.InvalidatePlot(false);
+                e.Handled = true;
+            }
+
+            public override void Completed(OxyMouseEventArgs e)
+            {
+                this.s1 = null;
+                e.Handled = true;
+            }
         }
 
         [Example("MouseDown event and HitTestResult")]
-        public static PlotModel MouseDownEventHitTestResult()
+        public static Example MouseDownEventHitTestResult()
         {
             var model = new PlotModel { Title = "MouseDown HitTestResult", Subtitle = "Reports the index of the nearest point." };
 
             var s1 = new LineSeries();
+            s1.Title = "LineSeries";
             s1.Points.Add(new DataPoint(0, 10));
             s1.Points.Add(new DataPoint(10, 40));
             s1.Points.Add(new DataPoint(40, 20));
             s1.Points.Add(new DataPoint(60, 30));
             model.Series.Add(s1);
-            s1.MouseDown += (s, e) =>
-                {
-                    model.Subtitle = "Index of nearest point in LineSeries: " + Math.Round(e.HitTestResult.Index);
-                    model.InvalidatePlot(false);
-                };
 
             var s2 = new ScatterSeries();
+            s2.Title = "ScatterSeries";
             s2.Points.Add(new ScatterPoint(0, 15));
             s2.Points.Add(new ScatterPoint(10, 45));
             s2.Points.Add(new ScatterPoint(40, 25));
             s2.Points.Add(new ScatterPoint(60, 35));
             model.Series.Add(s2);
-            s2.MouseDown += (s, e) =>
-                {
-                    model.Subtitle = "Index of nearest point in ScatterSeries: " + (int)e.HitTestResult.Index;
-                    model.InvalidatePlot(false);
-                };
 
-            return model;
+            var controller = new PlotController();
+
+            var mouseCommand = new DelegatePlotCommand<OxyMouseDownEventArgs>((v, c, e) =>
+            {
+                if (e.HitTestResult?.Element is OxyPlot.Series.Series series)
+                {
+                    v.ActualModel.Subtitle = $"Index of nearest point in {series.Title} {Math.Round(e.HitTestResult.Index)} hit";
+                    v.InvalidatePlot(false);
+                    e.Handled = true;
+                }
+                else if (v.ActualModel.GetSeriesFromPoint(e.Position) is OxyPlot.Series.Series series2)
+                {
+                    var hitTestResult = series2.GetNearestPoint(e.Position, false);
+                    v.ActualModel.Subtitle = $"Index of nearest point in {series2.Title} {Math.Round(hitTestResult.Index)}";
+                    v.InvalidatePlot(false);
+                    e.Handled = true;
+                }
+            });
+            controller.BindMouseDown(OxyMouseButton.Left, mouseCommand);
+
+            return new Example(model, controller);
         }
 
         [Example("LineSeries and PlotModel MouseDown event")]

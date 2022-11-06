@@ -73,7 +73,7 @@ namespace ExampleLibrary
         }
 
         [Example("Angle axis with offset angle")]
-        public static PlotModel OffsetAngles()
+        public static Example OffsetAngles()
         {
             var model = new PlotModel
             {
@@ -96,32 +96,21 @@ namespace ExampleLibrary
             model.Axes.Add(new MagnitudeAxis());
             model.Series.Add(new FunctionSeries(t => t, t => t, 0, Math.PI * 6, 0.01));
 
-            // Subscribe to the mouse down event on the line series.
-            model.MouseDown += (s, e) =>
+            var controller = new PlotController();
+
+            // Handle the mouse down event on the line series.
+            var mouseDownCommand = new DelegatePlotCommand<OxyMouseDownEventArgs>((view, cont, args) =>
             {
-                var increment = 0d;
+                double delta = args.ChangedButton == OxyMouseButton.Left ? 15 : -15;
+                angleAxis.StartAngle += delta;
+                angleAxis.EndAngle += delta;
+                view.InvalidatePlot(false);
+                args.Handled = true;
+            });
+            controller.BindMouseDown(OxyMouseButton.Left, mouseDownCommand);
+            controller.BindMouseDown(OxyMouseButton.Right, mouseDownCommand);
 
-                // Increment and decrement must be in degrees (corresponds to the StartAngle and EndAngle properties).
-                if (e.ChangedButton == OxyMouseButton.Left)
-                {
-                    increment = 15;
-                }
-
-                if (e.ChangedButton == OxyMouseButton.Right)
-                {
-                    increment = -15;
-                }
-
-                if (Math.Abs(increment) > double.Epsilon)
-                {
-                    angleAxis.StartAngle += increment;
-                    angleAxis.EndAngle += increment;
-                    model.InvalidatePlot(false);
-                    e.Handled = true;
-                }
-            };
-
-            return model;
+            return new Example(model, controller);
         }
 
         [Example("Semi-circle")]

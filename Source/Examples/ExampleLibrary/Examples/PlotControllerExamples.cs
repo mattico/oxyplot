@@ -83,15 +83,6 @@ namespace ExampleLibrary
             var annotation2 = new RectangleAnnotation { Fill = OxyColors.SkyBlue, Text = "RectangleAnnotation 2", MinimumX = 25, MaximumX = 75, MinimumY = 60, MaximumY = 80 };
             plotModel.Annotations.Add(annotation2);
 
-            EventHandler<OxyMouseDownEventArgs> handleMouseClick = (s, e) =>
-            {
-                plotModel.Subtitle = "You clicked " + ((RectangleAnnotation)s).Text;
-                plotModel.InvalidatePlot(false);
-            };
-
-            annotation1.MouseDown += handleMouseClick;
-            annotation2.MouseDown += handleMouseClick;
-
             var controller = new PlotController();
             var handleClick = new DelegatePlotCommand<OxyMouseDownEventArgs>(
                 (v, c, e) =>

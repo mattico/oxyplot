@@ -55,6 +55,13 @@ namespace OxyPlot
         /// <summary>
         /// Transforms a point from screen coordinates to data coordinates.
         /// </summary>
+        /// <param name="point">The screen coordinate.</param>
+        /// <returns>A data point.</returns>
+        protected DataPoint InverseTransform(ScreenPoint point) => this.InverseTransform(point.X, point.Y);
+
+        /// <summary>
+        /// Transforms a point from screen coordinates to data coordinates.
+        /// </summary>
         /// <param name="x">The x coordinate.</param>
         /// <param name="y">The y coordinate.</param>
         /// <returns>A data point.</returns>
