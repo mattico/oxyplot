@@ -120,7 +120,7 @@ namespace ExampleLibrary
         }
 
         [Example("LineSeries and PlotModel MouseDown event")]
-        public static PlotModel MouseDownEvent()
+        public static Example MouseDownEvent()
         {
             var model = new PlotModel { Title = "MouseDown", Subtitle = "Left click to edit or add points." };
             var l = new Legend
@@ -147,75 +147,83 @@ namespace ExampleLibrary
             s1.Points.Add(new DataPoint(60, 30));
             model.Series.Add(s1);
 
+            var controller = new PlotController();
+
+            controller.BindMouseDown(OxyMouseButton.Left, new MouseDownManipulatorPlotCommand(v => new EditPointsMouseManipulator(v, s1)));
+
+            return new Example(model, controller);
+        }
+
+        public class EditPointsMouseManipulator : MouseManipulator
+        {
+            readonly LineSeries s1;
             int indexOfPointToMove = -1;
 
-            // Subscribe to the mouse down event on the line series
-            s1.MouseDown += (s, e) =>
+            public EditPointsMouseManipulator(IPlotView plotView, LineSeries series) : base(plotView)
             {
-                // only handle the left mouse button (right button can still be used to pan)
-                if (e.ChangedButton == OxyMouseButton.Left)
+                this.s1 = series;
+            }
+
+            public override void Started(OxyMouseEventArgs e)
+            {
+                base.Started(e);
+
+                var hitTestResult = this.s1.HitTest(new HitTestArguments(e.Position, 2.0));
+                if ( == null)
                 {
-                    int indexOfNearestPoint = (int)Math.Round(e.HitTestResult.Index);
-                    var nearestPoint = s1.Transform(s1.Points[indexOfNearestPoint]);
+                    // Add a point to the line series.
+                    this.s1.Points.Add(this.s1.InverseTransform(e.Position));
+                    this.indexOfPointToMove = this.s1.Points.Count - 1;
+                }
+                else
+                {
+                    int indexOfNearestPoint = (int)Math.Round(hitTestResult.Index);
+                    var nearestPoint = this.s1.Transform(this.s1.Points[indexOfNearestPoint]);
 
                     // Check if we are near a point
                     if ((nearestPoint - e.Position).Length < 10)
                     {
                         // Start editing this point
-                        indexOfPointToMove = indexOfNearestPoint;
+                        this.indexOfPointToMove = indexOfNearestPoint;
                     }
                     else
                     {
                         // otherwise create a point on the current line segment
-                        int i = (int)e.HitTestResult.Index + 1;
-                        s1.Points.Insert(i, s1.InverseTransform(e.Position));
-                        indexOfPointToMove = i;
+                        int i = (int)hitTestResult.Index + 1;
+                        this.s1.Points.Insert(i, this.s1.InverseTransform(e.Position));
+                        this.indexOfPointToMove = i;
                     }
 
                     // Change the linestyle while editing
-                    s1.LineStyle = LineStyle.DashDot;
+                    this.s1.LineStyle = LineStyle.DashDot;
+                }
 
-                    // Remember to refresh/invalidate of the plot
-                    model.InvalidatePlot(false);
+                // Remember to refresh/invalidate of the plot
+                this.PlotView.InvalidatePlot(false);
 
-                    // Set the event arguments to handled - no other handlers will be called.
+                // Set the event arguments to handled - no other handlers will be called.
+                e.Handled = true;
+            }
+
+            public override void Delta(OxyMouseEventArgs e)
+            {
+                if (this.indexOfPointToMove >= 0)
+                {
+                    // Move the point being edited.
+                    this.s1.Points[this.indexOfPointToMove] = this.s1.InverseTransform(e.Position);
+                    this.PlotView.InvalidatePlot(false);
                     e.Handled = true;
                 }
-            };
+            }
 
-            s1.MouseMove += (s, e) =>
-                {
-                    if (indexOfPointToMove >= 0)
-                    {
-                        // Move the point being edited.
-                        s1.Points[indexOfPointToMove] = s1.InverseTransform(e.Position);
-                        model.InvalidatePlot(false);
-                        e.Handled = true;
-                    }
-                };
-
-            s1.MouseUp += (s, e) =>
+            public override void Completed(OxyMouseEventArgs e)
             {
                 // Stop editing
-                indexOfPointToMove = -1;
-                s1.LineStyle = LineStyle.Solid;
-                model.InvalidatePlot(false);
+                this.indexOfPointToMove = -1;
+                this.s1.LineStyle = LineStyle.Solid;
+                this.PlotView.InvalidatePlot(false);
                 e.Handled = true;
-            };
-
-            model.MouseDown += (s, e) =>
-                {
-                    if (e.ChangedButton == OxyMouseButton.Left)
-                    {
-                        // Add a point to the line series.
-                        s1.Points.Add(s1.InverseTransform(e.Position));
-                        indexOfPointToMove = s1.Points.Count - 1;
-
-                        model.InvalidatePlot(false);
-                        e.Handled = true;
-                    }
-                };
-            return model;
+            }
         }
 
         [Example("Add arrow annotations")]
